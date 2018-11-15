@@ -1,0 +1,76 @@
+Perulangan
+///////////////////////////////////////////////////////////
+DECLARE
+    CURSOR my_cur IS SELECT * FROM kontak;
+    my_rec my_cur%rowtype;
+BEGIN
+    OPEN my_cur;
+    LOOP
+        fetch my_cur into my_rec; EXIT WHEN my_cur%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(my_rec.no_telp);
+        IF LENGTH (my_rec.no_telp) <=3 THEN 
+            DBMS_OUTPUT.PUT_LINE('Telepon Rumah');
+        ELSIF LENGTH (my_rec.no_telp) <5 THEN DBMS_OUTPUT.PUT_LINE('Ponsel');
+        ELSE DBMS_OUTPUT.PUT_LINE('Telepon Tidak Diketahui');
+        ENDIF;
+    END LOOP;
+CLOSE my_cur;
+END;
+////////////////////////////////////////////////////////////
+
+Procedure
+////////////////////////////////////////////////////////////
+CREATE OR REPLACE PROCEDURE kelompok (kat kontak.id_kategori%TYPE)
+    IS CURSOR con_cur IS SELECT * FROM kontak; 
+    con_rec con_cur%ROWTYPE;
+    CURSOR kat_cur IS SELECT * FROM kategori;
+    kat_rec ket_cur%ROWTYPE;
+    kelompok kategori.kategori%TYPE;
+BEGIN
+    OPEN ket_cur;
+    LOOP
+        FETCH kat_cur INTO kat_rec; EXIT WHEN ket_cur%NOTFOUND;
+        IF (kat_rec.id_kategori = kat) THEN 
+            kelompok := kat_rec.kategori;
+        END IF;
+    END LOOP;
+    CLOSE ket_cur;
+    OPEN con_cur;
+    LOOP
+        FETCH con_cur INTO con_rec; EXIT WHEN con_cur%NOTFOUND;
+        IF (con_rec.id_kontak = kat) THEN
+            DBMS_OUTPUT.PUT_LINE(con_rec.id_kontak||'-'||kelompok||'-'||con_rec.nama||'-'||con_rec.no_telp);
+        END IF;
+    END LOOP;
+    CLOSE con_cur;
+END;
+
+//////////////////////////////////////////////////////////
+
+
+Function
+/////////////////////////////////////////////////////////
+CREATE OR REPLACE FUNCTION format_nama (id kontak.id_kontak%TYPE)
+RETURN kontak.nama%TYPE IS test kontak.nama%TYPE;
+BEGIN
+    SELECT nama INTO test FROM kontak WHERE id_kategori= id;
+    test := UPPER(test);
+    test := REPLACE(test,' ','-');
+    RETURN test;
+END;
+/////////////////////////////////////////////////////////
+
+Trigger
+/////////////////////////////////////////////////////////
+CREATE OR REPLACE TRIGGER kontak_idu
+AFTER UPDATE OR DELETE OR INSERT ON kontak
+FOR EACH ROW
+BEGIN
+    IF INSERTING THEN INSERT INTO log VALUES (SYSDATE, 'Menambahkan data dengan id_kontak '|| :new.id_kontak);
+    ELSIF DELETING THEN INSERT INTO log VALUES (SYSDATE, 'Menghapus data dengan id_kontak '|| :old.id_kontak);
+    ELSIF UPDATING THEN INSERT INTO log VALUES (SYSDATE, 'Memperbaruhi data dari '|| :old.nama||' ke '||:new.nama||', alamat dari '||:old.alamat||' ke '||:new.alamat||' dan telepon dari '||:old.no_telp||' ke' ||:new.no_telp);
+    END IF;
+END;
+
+/////////////////////////////////////////////////////////
+
